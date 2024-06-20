@@ -5,6 +5,8 @@ from insert_data import insertar_datos
 from psycopg2.extras import register_uuid
 from dotenv import load_dotenv
 from db.dbManager import get_db_cursor
+from psycopg2 import sql
+
 
 # Obtiene los devocionales de la base de datos
 # filters: columna por la que se va a filtrar
@@ -243,3 +245,85 @@ def obtener_biografias(offset=0, limite=10):
         }
         
         return respuesta
+    
+def get_comments(devotional_id, podcast_id):
+    with get_db_cursor() as cur:
+        try:
+            query = sql.SQL("""
+            SELECT c.id, c.comentario, c.fecha, u.email
+            FROM comentarios c
+            JOIN usuarios u ON c.usuario_id = u.id
+            WHERE (c.devocional_id = %s OR %s IS NULL OR %s = '')
+            AND (c.podcast_id = %s OR %s IS NULL OR %s = '')
+            AND c.comentario_id IS NULL
+            ORDER BY c.fecha DESC
+            """)
+            params = [devotional_id, devotional_id, devotional_id, podcast_id, podcast_id, podcast_id]
+            cur.execute(query, params)
+            comments = cur.fetchall()
+
+            result = []
+            for comment in comments:
+                comment_list = {
+                    "id": comment[0],
+                    "comment": comment[1],
+                    "date": comment[2],
+                    "email": comment[3],
+                    "replies": []
+                }
+                query = sql.SQL("""
+                SELECT c.id, c.comentario, c.fecha, u.email
+                FROM comentarios c
+                JOIN usuarios u ON c.usuario_id = u.id
+                WHERE c.comentario_id = %s
+                ORDER BY c.fecha ASC
+                """)
+                cur.execute(query, (comment[0],))
+                replies = cur.fetchall()
+                for reply in replies:
+                    reply_list = {
+                        "id": reply[0],
+                        "comment": reply[1],
+                        "date": reply[2],
+                        "email": reply[3]
+                    }
+                    comment_list["replies"].append(reply_list)
+                result.append(comment_list)
+
+            return result
+
+        except Exception as e:
+            return {
+                "message": "An error occurred",
+                "error": str(e)
+            }
+        
+def get_devotionals_titles():
+    with get_db_cursor() as cur:
+        try:
+            query = sql.SQL("""
+            SELECT id, titulo FROM devocionales
+            ORDER BY fecha DESC
+            """)
+            cur.execute(query)
+            result = cur.fetchall()
+            devotionals = [{"id": row[0], "title": row[1]} for row in result]
+            
+            return devotionals
+
+        except Exception as e:
+            raise e
+        
+def get_current_users():
+    with get_db_cursor() as cur:
+        try:
+            query = sql.SQL("""
+            SELECT * FROM usuarios
+            """)
+            cur.execute(query)
+            result = cur.fetchall()
+            users = [{"id": row[0], "email": row[1], "token": row[2] } for row in result]
+
+            return users
+        except Exception as e:
+            raise e
