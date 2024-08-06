@@ -213,3 +213,68 @@ def insert_news(image_url, title, description):
 
         except Exception as e:
             raise e
+        
+def insert_comment(devotional_id, podcast_id, user_id, comment):
+    with get_db_cursor() as cur:
+        map = {}
+        map['devocional_id'] = devotional_id if devotional_id else None
+        map['podcast_id'] = podcast_id if podcast_id else None
+        map['user_id'] = user_id
+        map['comentario'] = comment
+
+        try:
+            query = sql.SQL("""
+            INSERT INTO comentarios (devocional_id, podcast_id, usuario_id, comentario) 
+            VALUES (%(devocional_id)s, %(podcast_id)s, %(user_id)s, %(comentario)s)
+            RETURNING id
+            """)
+            cur.execute(query, map)
+            return
+
+        except Exception as e:
+            raise e
+        
+
+def insert_comment_reply(devotional_id, podcast_id, user_id, comment_id, comment):
+    with get_db_cursor() as cur:
+        map = {}
+        map['devocional_id'] = devotional_id if devotional_id else None
+        map['podcast_id'] = podcast_id if podcast_id else None
+        map['user_id'] = user_id
+        map['comentario_id'] = comment_id
+        map['comentario'] = comment
+
+        try:
+            query = sql.SQL("""
+            INSERT INTO comentarios (devocional_id, podcast_id, usuario_id, comentario_id, comentario) 
+            VALUES (%(devocional_id)s, %(podcast_id)s, %(user_id)s, %(comentario_id)s, %(comentario)s)
+            RETURNING id
+            """)
+            cur.execute(query, map)
+            return True
+
+        except Exception as e:
+            raise e
+         
+def delete_comment(comment_id):
+    with get_db_cursor() as cur:
+        try:
+            # First, delete child comments
+            query = sql.SQL("""
+            DELETE FROM comentarios WHERE comentario_id = %s
+            """)
+            cur.execute(query, (comment_id,))
+
+            # Then, delete the parent comment
+            query = sql.SQL("""
+            DELETE FROM comentarios WHERE id = %s
+            """)
+            cur.execute(query, (comment_id,))
+
+            return
+
+        except Exception as e:
+            return {
+                "message": "An error occurred",
+                "error": str(e)
+            }
