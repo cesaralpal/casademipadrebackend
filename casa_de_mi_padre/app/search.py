@@ -250,9 +250,8 @@ def get_comments(devotional_id, podcast_id):
     with get_db_cursor() as cur:
         try:
             query = sql.SQL("""
-            SELECT c.id, c.comentario, c.fecha, u.email
+            SELECT c.id, c.comentario, c.fecha, c.usuario_id
             FROM comentarios c
-            JOIN usuarios u ON c.usuario_id = u.id
             WHERE (c.devocional_id = %s OR %s IS NULL OR %s = '')
             AND (c.podcast_id = %s OR %s IS NULL OR %s = '')
             AND c.comentario_id IS NULL
@@ -268,13 +267,12 @@ def get_comments(devotional_id, podcast_id):
                     "id": comment[0],
                     "comment": comment[1],
                     "date": comment[2],
-                    "email": comment[3],
+                    "user_id": comment[3],
                     "replies": []
                 }
                 query = sql.SQL("""
-                SELECT c.id, c.comentario, c.fecha, u.email
+                SELECT c.id, c.comentario, c.fecha, c.usuario_id
                 FROM comentarios c
-                JOIN usuarios u ON c.usuario_id = u.id
                 WHERE c.comentario_id = %s
                 ORDER BY c.fecha ASC
                 """)
@@ -285,7 +283,7 @@ def get_comments(devotional_id, podcast_id):
                         "id": reply[0],
                         "comment": reply[1],
                         "date": reply[2],
-                        "email": reply[3]
+                        "user_id": reply[3]
                     }
                     comment_list["replies"].append(reply_list)
                 result.append(comment_list)
